@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">LandThatPlane</string>
+    <string name="btn_start">NEW GAME</string>
+    <string name="btn_resume">RESUME GAME</string>
+    <string name="btn_quit">QUIT</string>
+</resources>
