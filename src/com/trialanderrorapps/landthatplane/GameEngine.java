@@ -8,6 +8,15 @@ import android.util.Log;
 import android.view.*;
 import android.view.GestureDetector.*;
 
+class PlaneRenderer{
+  private static Paint paint = new Paint();
+  public static void draw(Plane p, Canvas canvas) {
+    paint.setColor(Color.RED);
+    paint.setAntiAlias(true);
+    canvas.drawCircle(p.x, p.y, 10, paint);
+  }
+}
+
 class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   GameThread gameThread;
   GameEngine gameEngine;
@@ -22,6 +31,7 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   public void surfaceCreated(SurfaceHolder holder) {
     gameThread = new GameThread(gameEngine);
     gameThread.start();
+    gameEngine.start(getWidth(), getHeight());
   }
   @Override
   public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -40,22 +50,24 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   }
 
   public void refresh(Canvas canvas) {
-    Paint paint = new Paint();
-    paint.setColor(Color.RED);
-    paint.setAntiAlias(true);
-    canvas.drawColor(Color.BLACK);
-    canvas.drawCircle(30, 30, 15, paint);
+    canvas.drawColor(Color.WHITE);
+    for (Plane p: gameEngine.gameSession.planes)
+      PlaneRenderer.draw(p, canvas);
   }
 }
 
 public class GameEngine {
+  GameSession gameSession = new GameSession();
   GamePanel gamePanel;
+  boolean isPaused = false;
 
   public GameEngine(Context context) {
     gamePanel = new GamePanel(this, context);
   }
   
   public void refresh(Canvas canvas) {
+    if (isPaused) return;
+    gameSession.refresh();
     gamePanel.refresh(canvas);
   }
 
@@ -65,6 +77,10 @@ public class GameEngine {
 
   public GamePanel getPanel() {
     return gamePanel;
+  }
+
+  void start(float width, float height) {
+    gameSession.start(width, height);
   }
 }
 
