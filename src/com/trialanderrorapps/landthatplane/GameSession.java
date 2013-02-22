@@ -11,22 +11,54 @@ import android.view.GestureDetector.*;
 import java.io.Serializable;
 import java.util.*;
 
-class Plane implements Serializable {
-  float x, y, dx, dy;
-  static long globalId = 0;
-  long id;
-  Plane(float x_, float y_, float dx_, float dy_) {
+class Point implements Serializable {
+  float x;
+  float y;
+  Point(float x_, float y_) {
     x = x_;
     y = y_;
-    dx = dx_;
-    dy = dy_;
+  }
+}
+
+class Plane implements Serializable {
+  static long globalId = 0;
+  static float speed = 1;
+  float x, y;
+  float dx, dy;
+  long id;
+  LinkedList<Point> trajectory = new LinkedList();
+
+  Plane(float x_, float y_, float destX, float destY) {
+    x = x_;
+    y = y_;
     id = globalId++;
+    // Add the next trajectory point
+    trajectory.add(new Point(destX, destY));
   }
 
   void refresh() {
+    int toRemove = 0;
+    float totalDist;
+    float distToGo = speed;
+    float dist = 0;
+    for (Point p: trajectory) {
+      dist = FloatMath.sqrt(sqr(p.x-x) + sqr(p.y-y));
+      if (distToGo < dist) break;
+      toRemove++;
+      distToGo -= dist;
+      x = p.x;
+      y = p.y;
+    }
+    for (int i = 0; i < toRemove; i++) trajectory.removeFirst();
+    if (dist > 0 && !trajectory.isEmpty()) {
+      Point p = trajectory.getFirst();
+      dx = (p.x - x) * distToGo / dist;
+      dy = (p.y - y) * distToGo / dist;
+    }
     x += dx;
     y += dy;
   }
+  static float sqr(float x) {return x * x;}
 }
 
 class Ground implements Serializable {
@@ -99,19 +131,23 @@ public class GameSession implements Serializable {
       x = pos;
       y = height;
     }
-    float dx = width/2 - x;
-    float dy = height/2 - y;
-    float dnorm = FloatMath.sqrt(dx*dx + dy*dy);
-    return new Plane(x, y, dx/dnorm, dy/dnorm);
+    return new Plane(x, y, width/2, height/2);
   }
 
   public long nearestPlane(float x, float y) {
+    float minDist = -1;
+    long id = -1;
     for (Plane p: planes) {
       float dx = p.x - x;
       float dy = p.y - y;
-      if (dx*dx + dy*dy < 30 * 30) return p.id;
+      float dist = dx*dx + dy*dy;
+      if (minDist < 0 || dist < minDist) {
+        minDist = dist;
+        id = p.id;
+      }
     }
-    return -1;
+    if (30 * 30 < minDist) id = -1;
+    return id;
   }
 
   public Plane getPlaneById(long id) {

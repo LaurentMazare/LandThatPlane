@@ -10,13 +10,30 @@ import android.view.GestureDetector.*;
 
 class PlaneRenderer{
   private static Paint paint = new Paint();
-  public static void draw(Plane p, Canvas canvas, boolean selected) {
+  public static void drawTrajectory(Plane plane, Canvas canvas) {
+    paint.setAntiAlias(true);
+    float lastX = plane.x;
+    float lastY = plane.y;
+    paint.setColor(Color.LTGRAY);
+    paint.setStrokeWidth(0);
+    paint.setAlpha(200);
+    for (Point p: plane.trajectory) {
+      float x = p.x;
+      float y = p.y;
+      if (x > GamePanel.width || x < 0 || y > GamePanel.height || y < 0) break;
+      canvas.drawLine(lastX, lastY, x, y, paint);
+      lastX = y;
+      lastY = y;
+    }
+  }
+  public static void draw(Plane plane, Canvas canvas, boolean selected) {
+    paint.setAntiAlias(true);
+    paint.setAlpha(255);
     if (selected)
       paint.setColor(Color.RED);
     else
       paint.setColor(Color.BLUE);
-    paint.setAntiAlias(true);
-    canvas.drawCircle(p.x, p.y, 10, paint);
+    canvas.drawCircle(plane.x, plane.y, 10, paint);
   }
 }
 
@@ -44,6 +61,8 @@ class GroundRenderer{
 }
 
 class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
+  static float width;
+  static float height;
   GameThread gameThread;
   GameEngine gameEngine;
   GameSession gameSession;
@@ -57,9 +76,11 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
+    width = getWidth();
+    height = getHeight();
     gameThread = new GameThread(gameEngine);
     gameThread.start();
-    gameEngine.start(getWidth(), getHeight());
+    gameEngine.start(width, height);
   }
   @Override
   public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -80,6 +101,8 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   public void refresh(Canvas canvas) {
     canvas.drawColor(Color.WHITE);
     GroundRenderer.draw(gameSession.ground, canvas);
+    for (Plane p: gameSession.planes)
+      PlaneRenderer.drawTrajectory(p, canvas);
     for (Plane p: gameSession.planes)
       PlaneRenderer.draw(p, canvas, p.id == gameEngine.selectedPlaneId);
   }
