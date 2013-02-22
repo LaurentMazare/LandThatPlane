@@ -34,6 +34,8 @@ class PlaneRenderer{
     paint.setAlpha(255);
     if (selected)
       paint.setColor(Color.RED);
+    else if (0 < plane.startedLanding)
+      paint.setColor(Color.GREEN);
     else
       paint.setColor(Color.BLUE);
     canvas.drawCircle(plane.x, plane.y, 10, paint);
@@ -46,16 +48,16 @@ class GroundRenderer{
     paint.setColor(Color.GREEN);
     paint.setAntiAlias(true);
     paint.setStrokeWidth(2);
-    float dx1 = (g.runawayYLeft - g.runawayYRight) / g.length * g.width / 2;
-    float dy1 = (g.runawayXRight - g.runawayXLeft) / g.length * g.width / 2;
-    float x1 = g.runawayXLeft + dx1;
-    float y1 = g.runawayYLeft + dy1;
-    float x2 = g.runawayXLeft - dx1;
-    float y2 = g.runawayYLeft - dy1;
-    float x3 = g.runawayXRight - dx1;
-    float y3 = g.runawayYRight - dy1;
-    float x4 = g.runawayXRight + dx1;
-    float y4 = g.runawayYRight + dy1;
+    float dx1 = (g.yLeft - g.yRight) / g.length * g.width / 2;
+    float dy1 = (g.xRight - g.xLeft) / g.length * g.width / 2;
+    float x1 = g.xLeft + dx1;
+    float y1 = g.yLeft + dy1;
+    float x2 = g.xLeft - dx1;
+    float y2 = g.yLeft - dy1;
+    float x3 = g.xRight - dx1;
+    float y3 = g.yRight - dy1;
+    float x4 = g.xRight + dx1;
+    float y4 = g.yRight + dy1;
     canvas.drawLine(x1, y1, x2, y2, paint);
     canvas.drawLine(x2, y2, x3, y3, paint);
     canvas.drawLine(x3, y3, x4, y4, paint);

@@ -11,6 +11,8 @@ import android.view.GestureDetector.*;
 import java.io.Serializable;
 import java.util.*;
 
+enum Status {FLYING, CRASHED, LANDED}
+
 class Point implements Serializable {
   float x;
   float y;
@@ -27,6 +29,7 @@ class Plane implements Serializable {
   float dx, dy;
   long id;
   LinkedList<Point> trajectory = new LinkedList();
+  long startedLanding = 0;
 
   Plane(float x_, float y_, float destX, float destY) {
     x = x_;
@@ -63,7 +66,7 @@ class Plane implements Serializable {
     if (!trajectory.isEmpty()) {
       Point p = trajectory.getLast();
       float d = sqr(x-p.x) + sqr(y-p.y);
-      if (500 < d) return;
+      if (d < 400) return;
     }
     trajectory.add(new Point(x, y));
   }
@@ -71,26 +74,37 @@ class Plane implements Serializable {
 }
 
 class Ground implements Serializable {
-  float runawayXLeft, runawayYLeft;
-  float runawayXRight, runawayYRight;
-  float width, length;
-
+  float xLeft, yLeft;
+  float xRight, yRight;
+  float width, w2, length;
 
   static float sqr(float x) {return x * x;}
   public void setup(float w, float h) {
-    runawayXLeft = w / 4;
-    runawayYLeft = h / 2;
-    runawayXRight = 3 * w / 4;
-    runawayYRight = h / 2;
+    xLeft = w / 4;
+    yLeft = h / 2;
+    xRight = 3 * w / 4;
+    yRight = h / 2;
+    length = FloatMath.sqrt(sqr(xLeft-xRight) + sqr(yLeft - yRight));
     width = 30;
-    length = FloatMath.sqrt(sqr(runawayXLeft-runawayXRight) + sqr(runawayYLeft - runawayYRight));
+    w2 = sqr(width/2-4);
+  }
+
+  public boolean isLanding(float x, float y) {
+    float lambda = (((x-xLeft)*(xRight-xLeft)) + (y-yLeft)*(yRight-yLeft)) / sqr(length);
+    float xP = xLeft + lambda * (xRight - xLeft);
+    float yP = yLeft + lambda * (yRight - yLeft);
+    float mu2 = sqr(xP-x) + sqr(yP-y);
+    if (0 < lambda && lambda < 1 && mu2 < w2) return true;
+    return false;
   }
 }
 
 public class GameSession implements Serializable {
+  private static long timeToLand = 3000;
+
   LinkedList<Plane> planes = new LinkedList();
   Ground ground = new Ground();
-  int savedPlanes = 0, lostPlanes = 0;
+  int landedPlanes = 0, lostPlanes = 0;
   float width, height;
   long nextPlaneTime;
   Random rng = new Random();
@@ -105,6 +119,19 @@ public class GameSession implements Serializable {
     ground.setup(w, h);
   }
 
+  private Status getPlaneStatus(Plane p, long currentTime) {
+    if (p.x < -10 || p.y < -10 || p.x > 10+width || p.y > 10+height)
+      return Status.CRASHED;
+    if (ground.isLanding(p.x, p.y)) {
+      if (p.startedLanding == 0) p.startedLanding = currentTime;
+      else if (timeToLand < currentTime - p.startedLanding)
+        return Status.LANDED;
+    }
+    else
+      p.startedLanding = 0;
+    return Status.FLYING;
+  }
+
   public void refresh(long currentTime) {
     if (nextPlaneTime < currentTime) {
       planes.add(randomPlane());
@@ -113,10 +140,17 @@ public class GameSession implements Serializable {
     LinkedList<Plane> toRemove = new LinkedList();
     for (Plane p: planes) {
       p.refresh();
-      if (p.x < 0 || p.y < 0 || p.x > width || p.y > height) toRemove.add(p);
+      Status status = getPlaneStatus(p, currentTime);
+      if (status == Status.CRASHED) {
+        lostPlanes++;
+        toRemove.add(p);
+      }
+      else if (status == Status.LANDED) {
+        landedPlanes++;
+        toRemove.add(p);
+      }
     }
     for (Plane p: toRemove) {
-      lostPlanes++;
       planes.remove(p);
     }
   }
