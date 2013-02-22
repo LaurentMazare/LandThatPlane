@@ -17,13 +17,16 @@ class PlaneRenderer{
     paint.setColor(Color.LTGRAY);
     paint.setStrokeWidth(0);
     paint.setAlpha(200);
-    for (Point p: plane.trajectory) {
-      float x = p.x;
-      float y = p.y;
-      if (x > GamePanel.width || x < 0 || y > GamePanel.height || y < 0) break;
-      canvas.drawLine(lastX, lastY, x, y, paint);
-      lastX = y;
-      lastY = y;
+    int i = 0;
+    synchronized(plane) {
+      for (Point p: plane.trajectory) {
+        float x = p.x;
+        float y = p.y;
+        if (x > GamePanel.width || x < 0 || y > GamePanel.height || y < 0) break;
+        canvas.drawLine(lastX, lastY, x, y, paint);
+        lastX = x;
+        lastY = y;
+      }
     }
   }
   public static void draw(Plane plane, Canvas canvas, boolean selected) {
@@ -143,6 +146,11 @@ public class GameEngine {
     lastDownTime = time;
     lastEventTime = time;
     selectedPlaneId = gameSession.nearestPlane(x, y);
+    Plane p = gameSession.getPlaneById(selectedPlaneId);
+    if (p == null) return;
+    synchronized(p) {
+      p.trajectory.clear();
+    }
   }
 
   void onScroll(float x, float y, long time, long downTime) {
@@ -150,6 +158,7 @@ public class GameEngine {
     Plane p = gameSession.getPlaneById(selectedPlaneId);
     if (p == null) return;
     lastEventTime = time;
+    p.addPointToTrajectory(x, y);
   }
 }
 

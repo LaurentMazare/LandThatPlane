@@ -36,7 +36,7 @@ class Plane implements Serializable {
     trajectory.add(new Point(destX, destY));
   }
 
-  void refresh() {
+  synchronized void refresh() {
     int toRemove = 0;
     float totalDist;
     float distToGo = speed;
@@ -57,6 +57,15 @@ class Plane implements Serializable {
     }
     x += dx;
     y += dy;
+  }
+
+  synchronized void addPointToTrajectory(float x, float y) {
+    if (!trajectory.isEmpty()) {
+      Point p = trajectory.getLast();
+      float d = sqr(x-p.x) + sqr(y-p.y);
+      if (500 < d) return;
+    }
+    trajectory.add(new Point(x, y));
   }
   static float sqr(float x) {return x * x;}
 }
