@@ -3,12 +3,13 @@ package com.trialanderrorapps.landthatplane;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.*;
 import android.view.GestureDetector.*;
 
 public class GameActivity extends Activity implements OnGestureListener {
   private GestureDetector gestureDetector;
-  private GameEngine gameEngine;
+  private GameEngine gameEngine = null;
   /** Called when the activity is first created. */
   @Override
   public void onCreate(Bundle savedInstanceState)
@@ -38,10 +39,13 @@ public class GameActivity extends Activity implements OnGestureListener {
   }
   @Override
   public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
+    if (gameEngine != null)
+      gameEngine.onScroll(e2.getX(), e2.getY(), e2.getEventTime(), e2.getDownTime());
     return true;
   }
   @Override
   public boolean onDown(MotionEvent ev) {
+    if (gameEngine != null) gameEngine.onDown(ev.getX(), ev.getY(), ev.getDownTime());
     return true;
   }
   @Override

@@ -8,6 +8,9 @@
 # Java class files
 *.class
 
+# Vim temporary files
+.*.swp
+
 # generated files
 bin/
 gen/
