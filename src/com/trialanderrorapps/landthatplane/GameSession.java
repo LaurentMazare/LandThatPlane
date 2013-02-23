@@ -39,7 +39,7 @@ class Plane implements Serializable {
     trajectory.add(new Point(destX, destY));
   }
 
-  synchronized void refresh() {
+  synchronized void move() {
     int toRemove = 0;
     float totalDist;
     float distToGo = speed;
@@ -62,13 +62,30 @@ class Plane implements Serializable {
     y += dy;
   }
 
-  synchronized void addPointToTrajectory(float x, float y) {
-    if (!trajectory.isEmpty()) {
-      Point p = trajectory.getLast();
-      float d = sqr(x-p.x) + sqr(y-p.y);
+  synchronized void addPointToTrajectory(float xT, float yT) {
+    float lastdX = dx, lastdY = dy;
+    float lastX = x, lastY = y;
+    Iterator t = trajectory.descendingIterator();
+    if (t.hasNext()) {
+      Point p = (Point)t.next();
+      lastX = p.x;
+      lastY = p.y;
+      lastdX = p.x - x;
+      lastdY = p.y - y;
+      float d = sqr(xT-p.x) + sqr(yT-p.y);
       if (d < 400) return;
+      if (t.hasNext()) {
+        Point prevP = (Point)t.next();
+        lastdX = p.x - prevP.x;
+        lastdY = p.y - prevP.y;
+      }
     }
-    trajectory.add(new Point(x, y));
+    float newdX = xT - lastX, newdY = yT - lastY;
+    float newN2 = sqr(newdX) + sqr(newdY);
+    float lastN2 = sqr(lastdX) + sqr(lastdY);
+    float dot = newdX*lastdX + newdY*lastdY;
+    if (dot < 0) return;
+    trajectory.add(new Point(xT, yT));
   }
   static float sqr(float x) {return x * x;}
 }
@@ -80,12 +97,12 @@ class Ground implements Serializable {
 
   static float sqr(float x) {return x * x;}
   public void setup(float w, float h) {
-    xLeft = w / 4;
+    xLeft = w / 3;
     yLeft = h / 2;
-    xRight = 3 * w / 4;
+    xRight = 2 * w / 3;
     yRight = h / 2;
     length = FloatMath.sqrt(sqr(xLeft-xRight) + sqr(yLeft - yRight));
-    width = 30;
+    width = 20;
     w2 = sqr(width/2-4);
   }
 
@@ -101,8 +118,11 @@ class Ground implements Serializable {
 
 public class GameSession implements Serializable {
   private static long timeToLand = 3000;
+  private static long timeToNextPlane = 5000;
+  private static long maxPlanes = 10;
 
   LinkedList<Plane> planes = new LinkedList();
+  int nbPlanes = 0;
   Ground ground = new Ground();
   int landedPlanes = 0, lostPlanes = 0;
   float width, height;
@@ -115,13 +135,22 @@ public class GameSession implements Serializable {
   public void start(float w, float h) {
     width = w;
     height = h;
-    nextPlaneTime = SystemClock.uptimeMillis() + 5000;
+    nextPlaneTime = SystemClock.uptimeMillis() + timeToNextPlane;
     ground.setup(w, h);
   }
 
   private Status getPlaneStatus(Plane p, long currentTime) {
+    // Bounds detection
     if (p.x < -10 || p.y < -10 || p.x > 10+width || p.y > 10+height)
       return Status.CRASHED;
+    // Collision detection
+    for (Plane p2: planes) {
+      if (p2.id == p.id) continue;
+      float dx = p2.x - p.x, dy = p2.y - p.y;
+      if (dx * dx + dy * dy < 100)
+        return Status.CRASHED;
+    }
+    // Landing detection
     if (ground.isLanding(p.x, p.y)) {
       if (p.startedLanding == 0) p.startedLanding = currentTime;
       else if (timeToLand < currentTime - p.startedLanding)
@@ -129,17 +158,23 @@ public class GameSession implements Serializable {
     }
     else
       p.startedLanding = 0;
+    // Normal mode
     return Status.FLYING;
   }
 
   public void refresh(long currentTime) {
-    if (nextPlaneTime < currentTime) {
+    if (nextPlaneTime < currentTime && nbPlanes < maxPlanes) {
       planes.add(randomPlane());
-      nextPlaneTime = currentTime + 5000;
+      nbPlanes++;
+      nextPlaneTime = currentTime + timeToNextPlane;
     }
+
+    // Move all the planes
+    for (Plane p: planes) p.move();
+
+    // Check the updated status
     LinkedList<Plane> toRemove = new LinkedList();
     for (Plane p: planes) {
-      p.refresh();
       Status status = getPlaneStatus(p, currentTime);
       if (status == Status.CRASHED) {
         lostPlanes++;
@@ -152,6 +187,7 @@ public class GameSession implements Serializable {
     }
     for (Plane p: toRemove) {
       planes.remove(p);
+      nbPlanes--;
     }
   }
 

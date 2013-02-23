@@ -8,6 +8,8 @@ import android.util.Log;
 import android.view.*;
 import android.view.GestureDetector.*;
 
+enum Mode {PAUSED, PLAYING, GAMEOVER, DEMO}
+
 class PlaneRenderer{
   private static Paint paint = new Paint();
   public static void drawTrajectory(Plane plane, Canvas canvas) {
@@ -68,6 +70,7 @@ class GroundRenderer{
 class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   static float width;
   static float height;
+  Paint textPaint = new Paint();
   GameThread gameThread;
   GameEngine gameEngine;
   GameSession gameSession;
@@ -77,6 +80,11 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     gameEngine = g;
     gameSession = g.gameSession;
     getHolder().addCallback(this);
+    textPaint.setTextSize(20);
+    textPaint.setAntiAlias(true);
+    textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD_ITALIC));
+    textPaint.setAlpha(200);
+    textPaint.setColor(Color.DKGRAY);
   }
 
   @Override
@@ -104,19 +112,29 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
   }
 
   public void refresh(Canvas canvas) {
+    // Render background in white
     canvas.drawColor(Color.WHITE);
+    // Render the ground
     GroundRenderer.draw(gameSession.ground, canvas);
+    // Render the planes
     for (Plane p: gameSession.planes)
       PlaneRenderer.drawTrajectory(p, canvas);
     for (Plane p: gameSession.planes)
       PlaneRenderer.draw(p, canvas, p.id == gameEngine.selectedPlaneId);
+    // Render the score / nb of planes left
+    String statusStr;
+    if (gameEngine.mode == Mode.GAMEOVER)
+      statusStr = String.format("!!!GAME OVER!!! %d PLANES SAVED.", gameSession.landedPlanes);
+    else
+      statusStr = String.format("%2d/%d", gameSession.landedPlanes, gameSession.lostPlanes);
+    canvas.drawText(statusStr, 25, 25, textPaint);
   }
 }
 
 public class GameEngine {
   GameSession gameSession = new GameSession();
   GamePanel gamePanel;
-  boolean isPaused = false;
+  Mode mode = Mode.PLAYING;
   long selectedPlaneId = -1;
   long lastEventTime = 0, lastDownTime = 0;
 
@@ -125,10 +143,12 @@ public class GameEngine {
   }
   
   public void refresh(Canvas canvas) {
-    if (isPaused) return;
-    long currentTime = SystemClock.uptimeMillis();
-    if (currentTime > lastEventTime + 1000) selectedPlaneId = -1;
-    gameSession.refresh(currentTime);
+    if (3 < gameSession.lostPlanes) mode = Mode.GAMEOVER;
+    if (mode == Mode.PLAYING) {
+      long currentTime = SystemClock.uptimeMillis();
+      if (currentTime > lastEventTime + 1000) selectedPlaneId = -1;
+      gameSession.refresh(currentTime);
+    }
     gamePanel.refresh(canvas);
   }
 
@@ -145,6 +165,7 @@ public class GameEngine {
   }
 
   void onDown(float x, float y, long time) {
+    if (mode != Mode.PLAYING) return;
     lastDownTime = time;
     lastEventTime = time;
     selectedPlaneId = gameSession.nearestPlane(x, y);
@@ -156,6 +177,7 @@ public class GameEngine {
   }
 
   void onScroll(float x, float y, long time, long downTime) {
+    if (mode != Mode.PLAYING) return;
     if (downTime != lastDownTime || selectedPlaneId == -1) return;
     Plane p = gameSession.getPlaneById(selectedPlaneId);
     if (p == null) return;
