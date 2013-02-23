@@ -4,7 +4,7 @@ import android.app.*;
 import android.content.*;
 import android.graphics.*;
 import android.os.*;
-import android.util.Log;
+import android.util.*;
 import android.view.*;
 import android.view.GestureDetector.*;
 
@@ -40,7 +40,18 @@ class PlaneRenderer{
       paint.setColor(Color.GREEN);
     else
       paint.setColor(Color.BLUE);
-    canvas.drawCircle(plane.x, plane.y, 10, paint);
+//    canvas.drawCircle(plane.x, plane.y, 10, paint);
+    float x = plane.x, y = plane.y, dx = plane.dx, dy = plane.dy;
+    float dN = FloatMath.sqrt(dx*dx+dy*dy);
+    float cosT = dx / dN, sinT = dy / dN;
+    Path path = new Path();
+    path.setFillType(Path.FillType.EVEN_ODD);
+    path.moveTo(x+cosT*10, y+sinT*10);
+    path.lineTo(x+cosT*(-10)-sinT*(-10), y+sinT*(-10)+cosT*(-10));
+    path.lineTo(x+cosT*(-5), y+sinT*(-5));
+    path.lineTo(x+cosT*(-10)-sinT*(10), y+sinT*(-10)+cosT*(10));
+    path.close();
+    canvas.drawPath(path, paint);
   }
 }
 
@@ -126,7 +137,7 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     if (gameEngine.mode == Mode.GAMEOVER)
       statusStr = String.format("!!!GAME OVER!!! %d PLANES SAVED.", gameSession.landedPlanes);
     else
-      statusStr = String.format("%2d/%d", gameSession.landedPlanes, gameSession.lostPlanes);
+      statusStr = String.format("LANDED %2d   CRASHED %d", gameSession.landedPlanes, gameSession.lostPlanes);
     canvas.drawText(statusStr, 25, 25, textPaint);
   }
 }
