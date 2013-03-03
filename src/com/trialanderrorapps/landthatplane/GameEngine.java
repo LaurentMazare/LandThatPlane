@@ -11,36 +11,45 @@ import android.view.GestureDetector.*;
 enum Mode {PAUSED, PLAYING, GAMEOVER, DEMO}
 
 class PlaneRenderer{
-  private static Paint paint = new Paint();
+  private static Paint trajectoryPaint = new Paint();
+  private static Paint strokePaint = new Paint();
+  private static Paint fillPaint = new Paint();
+
+  public static void init() {
+    trajectoryPaint.setAntiAlias(true);
+    trajectoryPaint.setColor(Color.LTGRAY);
+    trajectoryPaint.setStrokeWidth(0);
+    trajectoryPaint.setAlpha(200);
+    strokePaint.setAntiAlias(true);
+    strokePaint.setColor(android.graphics.Color.BLACK);
+    strokePaint.setStyle(Paint.Style.STROKE);
+    strokePaint.setStrokeWidth(2);
+    fillPaint.setAntiAlias(true);
+    fillPaint.setAlpha(255);
+  }
+
   public static void drawTrajectory(Plane plane, Canvas canvas) {
-    paint.setAntiAlias(true);
     float lastX = plane.x;
     float lastY = plane.y;
-    paint.setColor(Color.LTGRAY);
-    paint.setStrokeWidth(0);
-    paint.setAlpha(200);
     int i = 0;
     synchronized(plane) {
       for (Point p: plane.trajectory) {
         float x = p.x;
         float y = p.y;
         if (x > GamePanel.width || x < 0 || y > GamePanel.height || y < 0) break;
-        canvas.drawLine(lastX, lastY, x, y, paint);
+        canvas.drawLine(lastX, lastY, x, y, trajectoryPaint);
         lastX = x;
         lastY = y;
       }
     }
   }
   public static void draw(Plane plane, Canvas canvas, boolean selected) {
-    paint.setAntiAlias(true);
-    paint.setAlpha(255);
     if (selected)
-      paint.setColor(Color.RED);
+      fillPaint.setColor(Color.RED);
     else if (0 < plane.startedLanding)
-      paint.setColor(Color.GREEN);
+      fillPaint.setColor(Color.GREEN);
     else
-      paint.setColor(Color.BLUE);
-//    canvas.drawCircle(plane.x, plane.y, 10, paint);
+      fillPaint.setColor(Color.LTGRAY);
     float x = plane.x, y = plane.y, dx = plane.dx, dy = plane.dy;
     float dN = FloatMath.sqrt(dx*dx+dy*dy);
     float cosT = dx / dN, sinT = dy / dN;
@@ -51,7 +60,8 @@ class PlaneRenderer{
     path.lineTo(x+cosT*(-5), y+sinT*(-5));
     path.lineTo(x+cosT*(-10)-sinT*(10), y+sinT*(-10)+cosT*(10));
     path.close();
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, strokePaint);
   }
 }
 
@@ -96,6 +106,7 @@ class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD_ITALIC));
     textPaint.setAlpha(200);
     textPaint.setColor(Color.DKGRAY);
+    PlaneRenderer.init();
   }
 
   @Override

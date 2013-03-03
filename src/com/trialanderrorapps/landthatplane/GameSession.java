@@ -73,7 +73,7 @@ class Plane implements Serializable {
       lastdX = p.x - x;
       lastdY = p.y - y;
       float d = sqr(xT-p.x) + sqr(yT-p.y);
-      if (d < 255) return;
+      if (d < 100) return;
       if (t.hasNext()) {
         Point prevP = (Point)t.next();
         lastdX = p.x - prevP.x;
