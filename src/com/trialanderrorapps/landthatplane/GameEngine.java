@@ -20,6 +20,7 @@ class PlaneRenderer{
     trajectoryPaint.setColor(Color.LTGRAY);
     trajectoryPaint.setStrokeWidth(0);
     trajectoryPaint.setAlpha(200);
+    trajectoryPaint.setStyle(Paint.Style.STROKE);
     strokePaint.setAntiAlias(true);
     strokePaint.setColor(android.graphics.Color.BLACK);
     strokePaint.setStyle(Paint.Style.STROKE);
@@ -29,19 +30,26 @@ class PlaneRenderer{
   }
 
   public static void drawTrajectory(Plane plane, Canvas canvas) {
-    float lastX = plane.x;
-    float lastY = plane.y;
     int i = 0;
+    Path path = new Path();
+    path.moveTo(plane.x, plane.y);
+    float prevX = plane.x, prevY = plane.y;
+    int idx = 0;
     synchronized(plane) {
       for (Point p: plane.trajectory) {
         float x = p.x;
         float y = p.y;
         if (x > GamePanel.width || x < 0 || y > GamePanel.height || y < 0) break;
-        canvas.drawLine(lastX, lastY, x, y, trajectoryPaint);
-        lastX = x;
-        lastY = y;
+        float midX = (prevX + x) / 2, midY = (prevY + y) / 2;
+        if (idx == 0) path.lineTo(midX, midY);
+        else path.quadTo(prevX, prevY, midX, midY);
+        idx++;
+        prevX = x;
+        prevY = y;
       }
     }
+    if (idx > 0) path.lineTo(prevX, prevY);
+    canvas.drawPath(path, trajectoryPaint);
   }
   public static void draw(Plane plane, Canvas canvas, boolean selected) {
     if (selected)
